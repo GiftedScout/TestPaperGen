@@ -15,7 +15,7 @@ public class QuestionBank {
     private String label_1;
     private String label_2;
     private Date update_time;
-    // ===== 以下为 AI 解析模块（二次开发新增）字段，见 docs/04-数据库变更.md =====
+    // AI 解析字段，见 docs/04-数据库变更.md
     /** AI 生成的试题解析 */
     private String analysis;
     /** 解析状态：0 无解析，1 已生成 */

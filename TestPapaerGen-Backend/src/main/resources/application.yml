@@ -17,7 +17,7 @@ server:
 mybatis:
   mapper-locations: classpath:mybatis/mapper/*.xml
 
-# ===== AI 解析模块配置（二次开发新增），详见 docs/03-AI解析模块.md =====
+# AI 解析模块配置，详见 docs/03-AI解析模块.md
 ai:
   # 模块开关：false 时使用 Mock 占位解析，便于无密钥环境下演示与联调
   enabled: false

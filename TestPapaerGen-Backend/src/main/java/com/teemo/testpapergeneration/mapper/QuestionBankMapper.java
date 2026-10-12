@@ -64,7 +64,7 @@ public interface QuestionBankMapper {
     @Select("select count(*) from QuestionBank where score=#{score}")
     public Integer getQuestionBankCountByScore(Double score);
 
-    // ===== 以下为 AI 解析模块（二次开发新增），见 docs/04-数据库变更.md =====
+    // AI 解析字段更新，见 docs/04-数据库变更.md
     // 仅更新解析相关字段，不影响题目本身数据
     @Update("update QuestionBank set analysis=#{analysis}, analysis_status=#{analysis_status}, " +
             "analysis_update_time=#{analysis_update_time} where id=#{id}")

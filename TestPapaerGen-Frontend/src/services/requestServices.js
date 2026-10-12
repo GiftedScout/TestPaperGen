@@ -331,7 +331,7 @@ export function updateQuestionGenHistory(payload) {
   })
 }
 
-// ===== AI 解析模块（二次开发新增），详见 docs/05-接口文档.md =====
+// AI 解析模块，详见 docs/05-接口文档.md
 
 // 生成并保存单题解析
 export function generateAnalysis(payload) {

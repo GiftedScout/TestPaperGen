@@ -180,7 +180,7 @@ class QuestionBank extends React.Component {
       isLoading: false,
       isDrawerVisible: false,
       modalVisible: false,
-      // AI 解析弹窗（二次开发新增）
+      // AI 解析弹窗状态
       analysisVisible: false,
       currentAnalysisQuestion: null
     };
@@ -221,7 +221,7 @@ class QuestionBank extends React.Component {
     await this.setState({ isLoading: false });
   };
 
-  // ===== AI 解析（二次开发新增）=====
+  // AI 解析
   handleShowAnalysis = record => {
     this.setState({ analysisVisible: true, currentAnalysisQuestion: record });
   };
@@ -401,7 +401,7 @@ class QuestionBank extends React.Component {
       <RenderDrawer show={this.state.isDrawerVisible} hide={this.hideDrawer} />
       {/*概览界面*/}
       <OverViewModal visible={this.state.modalVisible} hide={this.hideModal} dataSource={this.props.tableDataSource} eachChapterCount={this.props.eachChapterCount} />
-      {/*AI 解析弹窗（二次开发新增）*/}
+      {/*AI 解析弹窗*/}
       <AiAnalysisModal
         visible={this.state.analysisVisible}
         question={this.state.currentAnalysisQuestion}

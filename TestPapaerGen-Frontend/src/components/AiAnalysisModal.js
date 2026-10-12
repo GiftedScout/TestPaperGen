@@ -7,7 +7,7 @@ import * as requestService from '../../services/requestServices';
 const { TextArea } = Input;
 
 /**
- * AI 解析弹窗（二次开发新增组件）。
+ * AI 解析弹窗。
  * 功能：查看解析 / 一键生成 / 手动编辑保存。
  * 生成失败时展示后端友好提示，不影响题库其他操作。
  */
