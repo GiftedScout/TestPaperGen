@@ -1,0 +1,41 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/test_paper_generation?serverTimezone=Asia/Shanghai&characterEncoding=utf-8
+    # 密码通过环境变量 DB_PASSWORD 注入，不要在配置文件中明文提交（安全需求）
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      max-lifetime: 30000
+      minimum-idle: 3
+      maximum-pool-size: 10
+      connection-test-query: SELECT 1
+      connection-timeout: 5000
+      validation-timeout: 5000
+server:
+  port: 80
+mybatis:
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
+# ===== AI 解析模块配置（二次开发新增），详见 docs/03-AI解析模块.md =====
+ai:
+  # 模块开关：false 时使用 Mock 占位解析，便于无密钥环境下演示与联调
+  enabled: false
+  # 提供商标识，当前支持 openai-compatible（任何兼容 OpenAI chat/completions 协议的服务）
+  provider: openai-compatible
+  # 接口地址（可替换为 DeepSeek / 通义 / 文心等 OpenAI 兼容网关）
+  base-url: https://api.openai.com/v1
+  # API Key：仅存放于后端，通过环境变量 AI_API_KEY 注入，严禁提交到 git / 暴露给前端
+  api-key: ${AI_API_KEY:}
+  # 模型名称
+  model: gpt-3.5-turbo
+  # 请求超时（毫秒），需求约束 15s
+  timeout-ms: 15000
+  # 单次生成最大 token 数
+  max-tokens: 800
+  # 采样温度，越低输出越稳定
+  temperature: 0.3
+  # 解析内容最大长度（字符），超出视为异常返回
+  max-analysis-length: 2000
+  # 提示词模板，占位符 {topicType} {topic} {answer}
+  prompt-template: "你是一名经验丰富的高校教师，请为下面这道{topicType}生成试题解析。要求：1、聚焦解题思路与关键知识点，不要复述题目；2、与给定答案保持一致，不得出现矛盾结论；3、200字以内，纯文本，不要使用Markdown标记。【题目】{topic}【答案】{answer}"
