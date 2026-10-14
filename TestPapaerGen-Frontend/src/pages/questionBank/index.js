@@ -1,14 +1,16 @@
 import React from 'react';
 import { connect, history } from 'umi';
 import moment from 'moment';
-import { Badge, Button, Input, PageHeader, Popconfirm, Select, Table, Tag } from 'antd';
+import { Badge, Button, Input, message, PageHeader, Popconfirm, Select, Table, Tag } from 'antd';
 import Highlighter from 'react-highlight-words';
-import { FileAddOutlined, SearchOutlined, PieChartOutlined } from '@ant-design/icons';
+import { FileAddOutlined, SearchOutlined, PieChartOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import style from './index.less';
-import { delay } from '../../utils/myUtils';
+import { checkCode, delay } from '../../utils/myUtils';
+import * as requestService from '../../services/requestServices';
 import RenderDrawer from './renderDrawer';
 import OverViewModal from './overViewModal';
 import AiAnalysisModal from '../../components/AiAnalysisModal';
+import AiBatchResultModal from '../../components/AiBatchResultModal';
 
 
 const renderTopicType = text => {
@@ -31,8 +33,8 @@ class QuestionBank extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      columnTitle: ['#', '题目', '题目类型', '分值', '答案', '大知识点', '小知识点', '大章节', '小章节', '操作', '难度', '更新时间'],
-      visibleColumn: ['#', '题目', '题目类型', '分值', '答案', '大知识点', '小知识点', '大章节', '小章节', '操作', '难度', '更新时间'],
+      columnTitle: ['#', '题目', '题目类型', '分值', '答案', '解析状态', '大知识点', '小知识点', '大章节', '小章节', '操作', '难度', '更新时间'],
+      visibleColumn: ['#', '题目', '题目类型', '分值', '答案', '解析状态', '大知识点', '小知识点', '大章节', '小章节', '操作', '难度', '更新时间'],
       defaultColumns: [
         {
           title: '#',
@@ -98,6 +100,28 @@ class QuestionBank extends React.Component {
           width: 180,
           className: style.column_small_text,
           ...this.getColumnSearchProps('answer'),
+        },
+        {
+          title: '解析状态',
+          dataIndex: 'analysis_status',
+          key: 'analysis_status',
+          width: 90,
+          className: style.column_small_text,
+          render: (text) => text === 1 ?
+            <Tag color='green'>已解析</Tag> :
+            <Tag>无解析</Tag>,
+          filters: [
+            {
+              text: '已解析',
+              value: 1,
+            },
+            {
+              text: '无解析',
+              value: 0,
+            },
+          ],
+          filterMultiple: false,
+          onFilter: (value, record) => record.analysis_status === value,
         },
         {
           title: '大知识点',
@@ -182,7 +206,12 @@ class QuestionBank extends React.Component {
       modalVisible: false,
       // AI 解析弹窗状态
       analysisVisible: false,
-      currentAnalysisQuestion: null
+      currentAnalysisQuestion: null,
+      // AI 批量生成解析状态
+      batchVisible: false,
+      batchResults: null,
+      batchLoading: false,
+      selectedRowKeys: []
     };
   }
 
@@ -231,6 +260,44 @@ class QuestionBank extends React.Component {
   // 生成成功后刷新题库列表，保证表格中解析状态同步
   handleAnalysisGenerated = () => {
     this.props.dispatch({ type: 'questionBank/getQuestionBank' });
+  };
+
+  // 批量生成解析：多选题目 -> 调用已就绪的 batchGenerate 接口 -> 展示逐题结果
+  handleSelectChange = (selectedRowKeys) => {
+    this.setState({ selectedRowKeys });
+  };
+
+  handleBatchGenerate = async () => {
+    const questionIds = this.state.selectedRowKeys
+      .map(key => {
+        const record = this.props.tableDataSource.find(item => item.key === key);
+        return record ? record.id : null;
+      })
+      .filter(id => id !== null);
+    if (questionIds.length === 0) {
+      message.warning('请先勾选需要生成解析的题目');
+      return;
+    }
+    this.setState({ batchLoading: true });
+    try {
+      const res = await requestService.batchGenerateAnalysis({ questionIds });
+      if (checkCode(res)) {
+        this.setState({ batchResults: res.data, batchVisible: true });
+        // 生成后刷新列表，同步解析状态列
+        this.props.dispatch({ type: 'questionBank/getQuestionBank' });
+      } else {
+        message.error(res.msg || '批量生成失败');
+      }
+    } catch (e) {
+      console.log(e);
+      message.error('批量生成失败，请检查网络或 AI 配置');
+    } finally {
+      this.setState({ batchLoading: false, selectedRowKeys: [] });
+    }
+  };
+
+  handleBatchClose = () => {
+    this.setState({ batchVisible: false });
   };
 
   // table 的列隐藏
@@ -360,7 +427,10 @@ class QuestionBank extends React.Component {
                loading={this.state.isLoading}
                scroll={{ x: 'max-content' }}
                rowClassName={this.rowClassName}
-               // bordered
+               rowSelection={{
+                 selectedRowKeys: this.state.selectedRowKeys,
+                 onChange: this.handleSelectChange,
+               }}
         />
         <span style={{color: "#666", fontSize: "0.8em"}}>控制表格显示的字段</span>
         <Select
@@ -385,6 +455,15 @@ class QuestionBank extends React.Component {
                     <span key="leftTop0">
                       <Button onClick={this.showModal} icon={<PieChartOutlined />} type="primary">概览功能</Button>
                     </span>,
+                    <span style={{ margin: '0 15px' }} key="leftTopBatch">
+                      <Badge count={this.state.selectedRowKeys.length}>
+                        <Button onClick={this.handleBatchGenerate}
+                                icon={<ThunderboltOutlined />}
+                                loading={this.state.batchLoading}
+                                disabled={this.state.selectedRowKeys.length === 0}
+                        >批量生成解析</Button>
+                      </Badge>
+                    </span>,
                     <span style={{ margin: '0 15px' }} key="leftTop1">
                       <Badge count={this.props.testPaperGenList.length}>
                         <Button onClick={this.showDrawer} icon={<FileAddOutlined/>} type="primary" id='leftTop1'>已手动选择的题目</Button>
@@ -407,6 +486,12 @@ class QuestionBank extends React.Component {
         question={this.state.currentAnalysisQuestion}
         onCancel={this.handleHideAnalysis}
         onGenerated={this.handleAnalysisGenerated}
+      />
+      {/*AI 批量解析结果弹窗*/}
+      <AiBatchResultModal
+        visible={this.state.batchVisible}
+        results={this.state.batchResults}
+        onCancel={this.handleBatchClose}
       />
       {/*题库表格*/}
       {
