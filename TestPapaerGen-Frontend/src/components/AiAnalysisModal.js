@@ -1,8 +1,8 @@
 import React from 'react';
 import { Button, Input, message, Modal, Spin, Tag } from 'antd';
 import moment from 'moment';
-import { checkCode } from '../../utils/myUtils';
-import * as requestService from '../../services/requestServices';
+import { checkCode } from '../utils/myUtils';
+import * as requestService from '../services/requestServices';
 
 const { TextArea } = Input;
 
