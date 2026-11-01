@@ -7,6 +7,7 @@ import com.teemo.testpapergeneration.mapper.QuestionBankMapper;
 import com.teemo.testpapergeneration.mapper.QuestionGenHistoryMapper;
 import com.teemo.testpapergeneration.mapper.TestPaperGenHistoryMapper;
 import com.teemo.testpapergeneration.services.WordExport;
+import com.teemo.testpapergeneration.services.PaperExportContent;
 import com.teemo.testpapergeneration.utils.MyJsonResponse;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
@@ -113,7 +114,8 @@ public class QuestionGenHistoryController {
 
     // 从历史记录中查询，并重新导出试卷
     @GetMapping(value = "/reExportTestPaper")
-    public ResponseEntity<FileSystemResource> reExportTestPaper(@RequestParam("test_paper_uid") String test_paper_uid) {
+    public ResponseEntity<FileSystemResource> reExportTestPaper(@RequestParam("test_paper_uid") String test_paper_uid,
+            @RequestParam(value = "withAnalysis", defaultValue = "false") boolean withAnalysis) {
         // 查找这张试卷的题目 Id
         List<QuestionGenHistory> questionGenHistories = questionGenHistoryMapper.getQuestionGenHistoriesByTestPaperUid(test_paper_uid);
         ArrayList<QuestionBank> questionBanks = new ArrayList<>();
@@ -123,21 +125,8 @@ public class QuestionGenHistoryController {
                 questionBanks.add(list.get(0));
             }
         }
-        // 生成模板填充信息
-        HashMap<String, String> map = new HashMap<>();
-        int total_score = 0;
-        int total_count = 0;
-        String contents = "";
-        for (QuestionBank q : questionBanks) {
-            total_score += q.getScore();
-            total_count ++;
-            contents = contents.concat(total_count + "、" + "（本题" + q.getScore() + "分）" + q.getTopic() + "\r\r");
-        }
-        map.put("total_score", String.valueOf(total_score));
-        map.put("total_count", String.valueOf(total_count));
-        map.put("contents", contents);
-
-        WordExport we = new WordExport(map);
+        // Preserve existing semantics: re-export reads the current question bank, not a snapshot.
+        WordExport we = new WordExport(PaperExportContent.model(questionBanks, withAnalysis), withAnalysis);
         File file = we.exportTestPaper(1);
         return downloadFile(file);
     }

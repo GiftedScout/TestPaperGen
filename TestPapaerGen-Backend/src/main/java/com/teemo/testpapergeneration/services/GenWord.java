@@ -59,6 +59,10 @@ public class GenWord {
     };
 
     public void genWordTest(List<QuestionBank> questionBanks, String test_paper_name, String username) throws IOException {
+        genWordTest(questionBanks, test_paper_name, username, false);
+    }
+
+    public void genWordTest(List<QuestionBank> questionBanks, String test_paper_name, String username, boolean withAnalysis) throws IOException {
         // step0 准备输出流
         if (resultFile != null) {
             try {
@@ -84,7 +88,7 @@ public class GenWord {
             // step3 加载模版文件
             Template template = configuration.getTemplate("微机原理试卷模板2.ftl");
             // step4 处理数据模型
-            HashMap<String, String> dataModel = new HashMap<>();
+            HashMap<String, Object> dataModel = new HashMap<>();
             String str = "";
             Integer index = 0;
             Double total_score = 0.0;
@@ -96,6 +100,10 @@ public class GenWord {
             dataModel.put("total_score", total_score.toString());
             dataModel.put("total_number", index.toString());
             dataModel.put("topic", str);
+            dataModel.put("withAnalysis", withAnalysis);
+            if (withAnalysis) {
+                dataModel.put("topicXml", PaperExportContent.legacyTopicXml(questionBanks));
+            }
             // step5 输出文件
             template.process(dataModel, bufferedWriter);
             // step 6 记录历史

@@ -3,6 +3,7 @@ import { connect, history } from 'umi';
 import {
   Button,
   Card,
+  Checkbox,
   Descriptions,
   Divider,
   Input,
@@ -34,6 +35,7 @@ class questionGenerator extends React.Component {
       // 按钮loading
       btnLoading: false,
       genBtnLoading: false,
+      withAnalysis: false,
       // 组卷参数设置
       testPaperName: "试卷_" + new Date().getTime(),
       // 随机选择开关
@@ -81,7 +83,7 @@ class questionGenerator extends React.Component {
     await this.setState({genBtnLoading: true});
     let questionIdList = [];
     await this.props.testPaperGenList.forEach(item => {questionIdList.push(item.id)});
-    await this.props.dispatch({type: 'questionGenerator/questionGen2', payload: {questionIdList: questionIdList, randomSwitch: this.state.randomSwitch, testPaperName: this.state.testPaperName}});
+    await this.props.dispatch({type: 'questionGenerator/questionGen2', payload: {questionIdList: questionIdList, randomSwitch: this.state.randomSwitch, testPaperName: this.state.testPaperName, withAnalysis: this.state.withAnalysis}});
     await this.setState({genBtnLoading: false});
   };
 
@@ -370,6 +372,11 @@ class questionGenerator extends React.Component {
                value={this.state.testPaperName}
         />
         <Divider />
+        <Checkbox checked={this.state.withAnalysis}
+                  disabled={this.state.genBtnLoading}
+                  onChange={e => this.setState({withAnalysis: e.target.checked})}>
+          附带解析（无解析题目仅导出题干）
+        </Checkbox>
         <Button icon={<CheckCircleOutlined />}
                 onClick={this.handleClickGenTestPaper}
                 type='primary'

@@ -9,6 +9,7 @@ import com.teemo.testpapergeneration.mapper.QuestionBankMapper;
 import com.teemo.testpapergeneration.mapper.QuestionGenHistoryMapper;
 import com.teemo.testpapergeneration.mapper.TestPaperGenHistoryMapper;
 import com.teemo.testpapergeneration.services.GenWord;
+import com.teemo.testpapergeneration.services.PaperExportContent;
 import com.teemo.testpapergeneration.services.GeneticIteration;
 import com.teemo.testpapergeneration.services.RandomSelectTopic;
 import com.teemo.testpapergeneration.services.WordExport;
@@ -232,7 +233,8 @@ public class QuestionGenController {
             else return myJsonResponse.make200Resp(MyJsonResponse.default_500_response, "传参错误，非法Id：" + eachId);
         }
         System.out.println(questionBanks.size());
-        genWord.genWordTest(questionBanks, testPaperName, username);
+        genWord.genWordTest(questionBanks, testPaperName, username,
+                payloadInJSON.getBooleanValue("withAnalysis"));
         return myJsonResponse.make200Resp(MyJsonResponse.default_200_response, null);
     }
 
@@ -313,21 +315,8 @@ public class QuestionGenController {
         }
         System.out.println(questionBanks.size());
 
-        // 生成模板填充信息
-        HashMap<String, String> map = new HashMap<>();
-        int total_score = 0;
-        int total_count = 0;
-        String contents = "";
-        for (QuestionBank q : questionBanks) {
-            total_score += q.getScore();
-            total_count ++;
-            contents = contents.concat(total_count + "、" + "（本题" + q.getScore() + "分）" + q.getTopic() + "\r\r");
-        }
-        map.put("total_score", String.valueOf(total_score));
-        map.put("total_count", String.valueOf(total_count));
-        map.put("contents", contents);
-
-        WordExport we = new WordExport(map);
+        boolean withAnalysis = payloadInJSON.getBooleanValue("withAnalysis");
+        WordExport we = new WordExport(PaperExportContent.model(questionBanks, withAnalysis), withAnalysis);
         File file = we.exportTestPaper(1);
         logHistory(questionBanks, testPaperName, username, file);
         return downloadFile(file);

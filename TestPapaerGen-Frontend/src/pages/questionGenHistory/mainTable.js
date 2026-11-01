@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Dropdown, Menu, Popconfirm, Popover, Table } from "antd";
+import { Button, Checkbox, Dropdown, Menu, Popconfirm, Popover, Table } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import style from '../questionBank/index.less';
@@ -85,6 +85,7 @@ export default class MainTable extends React.Component {
     ];
     this.state = {
       loading: false,
+      withAnalysis: false,
       tableWidth: 'max-content',
       // 重新组卷
       modifyTestPaperVisible: false,
@@ -115,7 +116,7 @@ export default class MainTable extends React.Component {
       console.log(record.test_paper_uid);
       await this.props.dispatch({
         type: 'questionGenHistory/reExportTestPaper',
-        payload: {test_paper_uid: record.test_paper_uid}
+        payload: {test_paper_uid: record.test_paper_uid, withAnalysis: this.state.withAnalysis}
       });
     }
     // 导出答案
@@ -171,6 +172,13 @@ export default class MainTable extends React.Component {
     };
     return (
       <div>
+        <div style={{margin: '0 30px 16px'}}>
+          <Checkbox checked={this.state.withAnalysis}
+                    onChange={e => this.setState({withAnalysis: e.target.checked})}>
+            重新导出试卷时附带解析
+          </Checkbox>
+          <span style={{color: '#666'}}>使用题库中当前保存的解析；无解析题目仅导出题干，答案导出不受影响。</span>
+        </div>
         {renderTable()}
         <ModifyTestPaper visible={this.state.modifyTestPaperVisible}
                          changeVisible={this.changeModifyTestPaperVisible}

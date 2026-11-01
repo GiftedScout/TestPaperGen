@@ -1,4 +1,5 @@
 import { message } from 'antd';
+import { downloadWord } from '../utils/downloadWord';
 import * as requestService from '../services/requestServices';
 import { checkCode, isArray } from '../utils/myUtils';
 import { geneticSelect } from "../services/requestServices";
@@ -152,6 +153,7 @@ export default {
         isArray(testPaperGenList) ? testPaperGenList.forEach(item => {questionIdList.push(item.id)}) : null;
         postPayload["questionIdList"] = questionIdList;
         postPayload["testPaperName"] = payload.testPaperName;
+        postPayload["withAnalysis"] = payload.withAnalysis === true;
         // 这些是自动组卷的Ids
         postPayload["TKTIdList"] = [];
         postPayload["XZTIdList"] = [];
@@ -181,21 +183,10 @@ export default {
           postPayload["JDTIdList"] = JDTIdList;
         }
         const res = yield call(requestService.questionGen2, postPayload);
-        // Response  mixin的 blob()方法使用一个 Response 流，并将其读取完成。它返回一个使用Blob解决的promise。
-        res.blob().then(b => {
-          let a = document.createElement("a");
-          a.href = URL.createObjectURL(b);
-          a.download = "试卷导出.docx";
-          a.style.display = "none";
-          document.body.appendChild(a);
-          a.click();
-          URL.revokeObjectURL(a.href);
-          a.remove();
-          message.success("生成Word文件成功", 2)
-        })
-
+        yield call(downloadWord, res, "试卷导出.docx");
+        message.success("生成Word文件成功", 2);
       } catch (e) {
-        console.log(e)
+        message.error(e.message || "试卷导出失败，请稍后重试");
       }
     }
 
