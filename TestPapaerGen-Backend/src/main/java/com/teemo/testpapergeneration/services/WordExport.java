@@ -13,8 +13,14 @@ import java.util.regex.Pattern;
 public class WordExport {
 
     Map<String, String> map;
+    private final boolean withAnalysis;
     public WordExport(Map<String, String> map) {
+        this(map, false);
+    }
+
+    public WordExport(Map<String, String> map, boolean withAnalysis) {
         this.map = map;
+        this.withAnalysis = withAnalysis;
     }
 
     public File exportTestPaper(Integer templateType) {
@@ -30,21 +36,17 @@ public class WordExport {
         try {
             // 试卷的模板路径
             ClassPathResource classPathResource = new ClassPathResource(templatePath);
-            InputStream is = classPathResource.getInputStream();
-            XWPFDocument doc = new XWPFDocument(is);
-            is.close();
-            // 充填模板
-            fillTestPaperTemplate(doc, map);
-            // 输出文件
-            File file = File.createTempFile("TestPaperExport" + "_" + UUID.randomUUID().toString().replace("-", "").toLowerCase(), ".docx");
-            try {
-                FileOutputStream out = new FileOutputStream(file);
-                doc.write(out);
-                out.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            try (InputStream is = classPathResource.getInputStream();
+                 XWPFDocument doc = new XWPFDocument(is)) {
+                // 充填模板
+                fillTestPaperTemplate(doc, map, withAnalysis);
+                // 输出文件
+                File file = File.createTempFile("TestPaperExport" + "_" + UUID.randomUUID().toString().replace("-", "").toLowerCase(), ".docx");
+                try (FileOutputStream out = new FileOutputStream(file)) {
+                    doc.write(out);
+                }
+                return file;
             }
-            return file;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -61,6 +63,10 @@ public class WordExport {
      * @param map  需要替换的信息
      */
     public static void fillTestPaperTemplate(XWPFDocument document, Map<String, String> map) {
+        fillTestPaperTemplate(document, map, false);
+    }
+
+    private static void fillTestPaperTemplate(XWPFDocument document, Map<String, String> map, boolean withAnalysis) {
         // 获取段落集合
         List<XWPFParagraph> paragraphs = document.getParagraphs();
         for (XWPFParagraph paragraph : paragraphs) {
@@ -69,7 +75,19 @@ public class WordExport {
                 List<XWPFRun> runs = paragraph.getRuns();
                 for (XWPFRun run : runs) {
                     String str = changeValue(run.toString(), map);
-                    if (str != null) run.setText(str, 0);
+                    if (str != null) {
+                        if (withAnalysis && run.toString().contains("${contents}")) {
+                            // Explicit Word line breaks; POI escapes XML-sensitive characters.
+                            String[] lines = str.split("\\r\\n|\\r|\\n", -1);
+                            run.setText(lines[0], 0);
+                            for (int i = 1; i < lines.length; i++) {
+                                run.addBreak();
+                                run.setText(lines[i]);
+                            }
+                        } else {
+                            run.setText(str, 0);
+                        }
+                    }
                 }
             }
         }

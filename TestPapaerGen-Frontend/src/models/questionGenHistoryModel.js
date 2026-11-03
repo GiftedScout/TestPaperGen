@@ -1,6 +1,7 @@
 import * as requestService from '../services/requestServices';
 import { checkCode, isArray } from '../utils/myUtils';
 import { message } from 'antd';
+import { downloadWord } from '../utils/downloadWord';
 import { exportAnswer } from "../services/requestServices";
 
 export default {
@@ -54,18 +55,10 @@ export default {
     *reExportTestPaper({payload}, {call, put}) {
       try {
         const res = yield call(requestService.reExportTestPaper, payload);
-        res.blob().then(b => {
-          let a = document.createElement("a");
-          a.href = URL.createObjectURL(b);
-          a.download = "试卷导出.docx";
-          a.style.display = "none";
-          document.body.appendChild(a);
-          a.click();
-          URL.revokeObjectURL(a.href);
-          a.remove();
-        })
+        yield call(downloadWord, res, "试卷导出.docx");
+        message.success("生成Word文件成功", 2);
       } catch (e) {
-        throw e
+        message.error(e.message || "试卷导出失败，请稍后重试");
       }
     },
 
