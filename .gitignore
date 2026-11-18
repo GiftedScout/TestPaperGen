@@ -34,3 +34,11 @@ application-local.properties
 *.log
 *.tmp
 nohup.out
+
+# 个人环境的便捷启动脚本（含本机绝对路径，对他机无效，不入库）
+scripts/local-*.ps1
+scripts/local-*.sh
+scripts/local-*.bat
+
+# 本地运行日志
+logs/

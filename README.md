@@ -36,44 +36,34 @@
 
 ## 快速开始
 
-### 方式一：本机一键脚本（Windows，已配置好便携环境）
-
-```powershell
-# 启动 MySQL + 后端(8081) + 前端(8000)，完成后打开浏览器
-powershell -ExecutionPolicy Bypass -File scripts\local-start.ps1
-
-# 启用真实模型（PowerShell 续行符是反引号）
-powershell -ExecutionPolicy Bypass -File scripts\local-start.ps1 `
-  -AiKey "sk-xxx" -AiBaseUrl "https://api.deepseek.com/v1" -AiModel "deepseek-chat"
-
-# 停止全部
-powershell -ExecutionPolicy Bypass -File scripts\local-stop.ps1
-```
-
-- 脚本会依次检查端口占用、按需拉起服务，日志写入 `logs/`（`backend.out.log`、`frontend.log`、`frontend.err.log`）。
-- 该脚本直接调用绝对路径的 `node.exe` 与 `node_modules/umi/bin/umi.js`，**不依赖 npm 是否在 PATH**。
-- 端口约定：后端 **8081**、前端 **8000**。前端 `requestConfig.js` 会把 `:8000` 替换为 `:8081`，两者必须成对。
-
-### 方式二：通用手工部署
-
-环境要求：JDK 8+、Maven 3.6+、Node.js 14+、MySQL 5.7+。
+前置依赖：**JDK 8**、**Maven 3.6+**、**Node.js 14+（建议 16）**、**MySQL 5.7+/8.0**（字符集 utf8mb4）。下面的命令与操作系统无关，按你本机实际的软件安装位置执行即可。
 
 ```bash
-# 1. 数据库
-mysql -u root -p < database/base/test_paper_generation_base.sql
-mysql -u root -p < database/migrations/001_ai_analysis.sql
+# 1. 建库并导入（先建库，再按编号顺序执行脚本）
+mysql -u root -p -e "create database if not exists test_paper_generation default charset utf8mb4"
+mysql -u root -p test_paper_generation < database/base/test_paper_generation_base.sql
+mysql -u root -p test_paper_generation < database/migrations/001_ai_analysis.sql
 
-# 2. 后端（application.yml 默认端口 80）
+# 2. 后端（application.yml 默认 80 端口；本地建议显式指定端口）
 cd TestPapaerGen-Backend
-mvn install && mvn package
-java -jar target/test-paper-generation-3.0.0.jar
+mvn -DskipTests package
+DB_PASSWORD=你的密码 AI_API_KEY=sk-xxx java -jar target/test-paper-generation-3.0.0.jar --server.port=8081
 
-# 3. 前端（开发服务器 8000）
+# 3. 前端（另开一个终端，开发服务器 8000）
 cd TestPapaerGen-Frontend
-npm install && npm start
+npm install
+npm start
 ```
 
-数据库密码与 AI 密钥通过环境变量注入，见下方「配置」。
+打开 <http://localhost:8000>。数据库密码、端口、AI 密钥全部通过环境变量或命令行参数注入，见下方「配置」；不要把任何密钥写进 `application.yml` 后提交。
+
+### 关于启动脚本
+
+本仓库**不收录环境专用的启动脚本**。原因很直接：JDK / Maven / MySQL 的安装位置、端口占用、代理设置、Node 版本每台机器都不一样，把 `D:\...` 这类绝对路径写进脚本提交上去，对别人只是一堆失效命令，还会掩盖"到底需要哪些前置条件"。
+
+需要一键启动时，请按自己的环境写一个，放在本地并加入 `.gitignore`，不要提交；要交接给他人时，写清**前置条件 + 命令**，而不是附一个只在你机器上成立的脚本。
+
+> 端口注意：前端 `src/config/requestConfig.js` 目前把 `:8000` 替换为 `:8081` 生成 API 地址，因此后端需监听 **8081** 才能联调。这一硬编码已在任务包 B 中立项改造（见 [docs/11](docs/11-任务包B-平台化与体验优化.md)），改造后排 B4 时前后端端口互不约束。
 
 ## 配置
 
