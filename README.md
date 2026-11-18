@@ -16,11 +16,13 @@
 - 数据可视化：基于 ECharts 的题库与试卷题型、难度分布统计
 
 **AI 试题解析**
-- 一键生成：选中题目生成解析并自动入库
-- 解析查看与人工编辑
-- Mock 模式：未配置密钥时生成占位解析，开发联调无需消耗额度
-- 前端配置：管理员在「管理员页 / 题库页」点击「AI 配置」，运行时填写 Key 与模型，保存即生效，密钥不落库、不回显
-- 容错设计：网络异常、超时（15s）、返回格式非法均返回友好提示，不影响组卷等主流程
+- 一键生成：选中题目生成解析并自动入库，解析状态可在题库页筛选
+- 批量生成：题库页多选后批量生成，结果弹窗逐题展示成功/失败与原因
+- 解析查看与人工编辑：生成后可手工修改并保存
+- 管理员配置页：顶部导航「AI 配置」（`/aiConfig`），可改接口地址、模型、Key，支持**拉取模型列表**与**连通性测试**，保存即时生效
+- 密钥边界：只写后端进程内存、脱敏回显（`sk-****1234`）、不入库、不写浏览器存储；重启后回落到配置文件
+- 容错设计：空返回/限流/5xx 自动重试 3 次，401/403/404 直接给中文提示；失败原因展示在弹窗内，不影响组卷等主流程
+- Mock 模式：未配置密钥时生成 `[Mock]` 占位解析，开发联调不消耗额度
 
 ## 技术栈
 
@@ -34,6 +36,26 @@
 
 ## 快速开始
 
+### 方式一：本机一键脚本（Windows，已配置好便携环境）
+
+```powershell
+# 启动 MySQL + 后端(8081) + 前端(8000)，完成后打开浏览器
+powershell -ExecutionPolicy Bypass -File scripts\local-start.ps1
+
+# 启用真实模型（PowerShell 续行符是反引号）
+powershell -ExecutionPolicy Bypass -File scripts\local-start.ps1 `
+  -AiKey "sk-xxx" -AiBaseUrl "https://api.deepseek.com/v1" -AiModel "deepseek-chat"
+
+# 停止全部
+powershell -ExecutionPolicy Bypass -File scripts\local-stop.ps1
+```
+
+- 脚本会依次检查端口占用、按需拉起服务，日志写入 `logs/`（`backend.out.log`、`frontend.log`、`frontend.err.log`）。
+- 该脚本直接调用绝对路径的 `node.exe` 与 `node_modules/umi/bin/umi.js`，**不依赖 npm 是否在 PATH**。
+- 端口约定：后端 **8081**、前端 **8000**。前端 `requestConfig.js` 会把 `:8000` 替换为 `:8081`，两者必须成对。
+
+### 方式二：通用手工部署
+
 环境要求：JDK 8+、Maven 3.6+、Node.js 14+、MySQL 5.7+。
 
 ```bash
@@ -41,7 +63,7 @@
 mysql -u root -p < database/base/test_paper_generation_base.sql
 mysql -u root -p < database/migrations/001_ai_analysis.sql
 
-# 2. 后端（默认端口 80）
+# 2. 后端（application.yml 默认端口 80）
 cd TestPapaerGen-Backend
 mvn install && mvn package
 java -jar target/test-paper-generation-3.0.0.jar
@@ -67,14 +89,31 @@ npm install && npm start
 
 | 配置 | 默认 | 说明 |
 |---|---|---|
-| `ai.enabled` | `false` | 总开关；`false` 时返回占位解析 |
-| `ai.base-url` | `https://api.openai.com/v1` | OpenAI 兼容接口地址，可替换为任意兼容网关 |
-| `ai.model` | `gpt-3.5-turbo` | 模型名 |
-| `ai.timeout-ms` | `15000` | 请求超时 |
-| `ai.max-analysis-length` | `2000` | 解析长度上限（字符） |
+| `ai.enabled` | `false` | 总开关；`false` 时返回 `[Mock]` 占位解析 |
+| `ai.provider` | `openai-compatible` | 提供商标识 |
+| `ai.base-url` | `https://api.openai.com/v1` | OpenAI 兼容接口地址，需含 `/v1` |
+| `ai.model` | `gpt-3.5-turbo` | 模型名，建议 `deepseek-chat` |
+| `ai.timeout-ms` | `15000` | 连接/读取超时 |
+| `ai.max-tokens` | `1200` | 单次生成上限；提示词要求 200 字内，留余量防截断 |
+| `ai.temperature` | `0.3` | 采样温度，低温更稳定 |
+| `ai.max-analysis-length` | `2000` | 解析长度上限（字符），超出不落库 |
 | `ai.prompt-template` | 见 yml | 提示词模板，占位符 `{topicType}` `{topic}` `{answer}` |
 
+### 运行时配置的当前边界
+
+管理员可在 `/aiConfig` 修改 `enabled / baseUrl / model / apiKey` 并立即生效，但**其余参数与提示词仍只能改 `application.yml`**，配置也**未持久化到磁盘**（重启回落）。这两项已作为任务包 B 的 B2 / B3 立项，见 [docs/11](docs/11-任务包B-平台化与体验优化.md)。
+
 完整配置与提示词调优说明见 [docs/03-AI解析模块.md](docs/03-AI解析模块.md)。
+
+## 已知限制
+
+| 事项 | 说明 |
+|---|---|
+| 题库答案大量为占位符 | 当前开发库 589 题中 587 题 `answer` 是 `AAAA`，**自动判题需先做答案治理**，见 [docs/10](docs/10-任务包A-学生端与判题报告.md) A0 |
+| 历史重导出无解析快照 | 重导出读取当前题库内容与解析，题库更新会反映到历史试卷 |
+| 批量生成为顺序执行 | 耗时 ≈ 题数 × 单次耗时，建议单批 ≤ 10 题 |
+| 运行时配置不持久化 | 重启丢失 Key，需重新填写或改用环境变量 `AI_API_KEY` |
+| 后端端口硬编码映射 | 前端按 `:8000 → :8081` 替换生成 API 地址，改端口需同步改 `requestConfig.js` |
 
 ## 文档
 
@@ -88,6 +127,9 @@ npm install && npm start
 | [docs/06-开发任务清单.md](docs/06-开发任务清单.md) | 路线图、验收标准、已知限制 |
 | [docs/07-交接说明.md](docs/07-交接说明.md) | 开发环境搭建、目录速查、故障排查 |
 | [docs/08-M3导出与集成.md](docs/08-M3导出与集成.md) | M3 变更范围、参数语义与验证记录 |
+| [docs/09-人工验收手册.md](docs/09-人工验收手册.md) | A–H 八组人工验收步骤与踩坑提示 |
+| [docs/10-任务包A-学生端与判题报告.md](docs/10-任务包A-学生端与判题报告.md) | 计划中：学生端、自动判题、综合报告、局域网消息 |
+| [docs/11-任务包B-平台化与体验优化.md](docs/11-任务包B-平台化与体验优化.md) | 计划中：UI 现代化、AI 参数全量暴露、配置持久化、跨平台运行 |
 
 ## 开发规范
 
@@ -95,6 +137,7 @@ npm install && npm start
 - Commit：`<模块>: <做了什么>`，如 `ai: 新增批量生成接口`
 - 数据库变更：必须新增 `database/migrations/` 编号脚本，幂等且附回滚说明，不允许直接修改 base 脚本
 - 禁止提交：数据库密码、AI 密钥、本地配置文件（根 `.gitignore` 已屏蔽）
+- 测试：后端改动需保证 `mvn test` 全绿（当前 23 项）；前端改动需 `npx umi build` 通过
 
 ## 许可证
 
