@@ -1,5 +1,6 @@
 package com.teemo.testpapergeneration.ai;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.teemo.testpapergeneration.entity.QuestionBank;
 import com.teemo.testpapergeneration.mapper.QuestionBankMapper;
@@ -107,14 +108,149 @@ public class AiAnalysisService {
         return 1;
     }
 
-    /** 当前模块状态（不返回 apiKey） */
+    /** 当前模块状态：只返回脱敏 Key，绝不返回明文 */
     public JSONObject status() {
         JSONObject json = new JSONObject();
         json.put("enabled", aiConfig.isEnabled());
         json.put("provider", aiConfig.getProvider());
+        json.put("baseUrl", aiConfig.getBaseUrl());
         json.put("model", aiConfig.getModel());
         json.put("timeoutMs", aiConfig.getTimeoutMs());
+        json.put("apiKeyConfigured", isConfigured());
+        json.put("apiKeyMasked", maskKey(aiConfig.getApiKey()));
         return json;
+    }
+
+    /**
+     * 运行时更新 AI 配置。
+     * 仅修改内存中的 AiConfig 单例，立即对 OpenAiCompatibleClient 生效；
+     * 不写数据库、不写文件，进程重启后回落到 application.yml / 环境变量。
+     *
+     * @param enabled 模块开关，null 表示保持原值
+     * @param baseUrl 接口地址，null/空表示保持原值
+     * @param model   模型名，null/空表示保持原值
+     * @param apiKey  密钥，null/空表示保持原值
+     * @return 脱敏后的最新状态
+     * @throws AiException 参数校验失败
+     */
+    public JSONObject updateRuntimeConfig(Boolean enabled, String baseUrl, String model, String apiKey)
+            throws AiException {
+        String nextBaseUrl = trimToNull(baseUrl);
+        String nextModel = trimToNull(model);
+        String nextKey = trimToNull(apiKey);
+        boolean nextEnabled = enabled != null ? enabled.booleanValue() : aiConfig.isEnabled();
+
+        if (nextBaseUrl != null && !nextBaseUrl.matches("^https?://.+")) {
+            throw new AiException("接口地址必须以 http:// 或 https:// 开头");
+        }
+        if (nextEnabled) {
+            String effectiveKey = nextKey != null ? nextKey : aiConfig.getApiKey();
+            if (effectiveKey == null || effectiveKey.trim().isEmpty()) {
+                throw new AiException("启用 AI 前请先填写 API Key");
+            }
+            String effectiveModel = nextModel != null ? nextModel : aiConfig.getModel();
+            if (effectiveModel == null || effectiveModel.trim().isEmpty()) {
+                throw new AiException("模型名称不能为空");
+            }
+        }
+
+        if (nextBaseUrl != null) {
+            aiConfig.setBaseUrl(nextBaseUrl);
+        }
+        if (nextModel != null) {
+            aiConfig.setModel(nextModel);
+        }
+        if (nextKey != null) {
+            aiConfig.setApiKey(nextKey);
+        }
+        aiConfig.setEnabled(nextEnabled);
+        return status();
+    }
+
+    /**
+     * 连通性测试：用当前或临时传入的配置发一次最小请求，返回耗时与错误原因。
+     * 不修改运行时配置，不写库。
+     */
+    public JSONObject testConnection(String baseUrl, String model, String apiKey) {
+        JSONObject ret = new JSONObject();
+        String url = firstNonBlank(baseUrl, aiConfig.getBaseUrl());
+        String m = firstNonBlank(model, aiConfig.getModel());
+        String key = firstNonBlank(apiKey, aiConfig.getApiKey());
+        ret.put("baseUrl", url);
+        ret.put("model", m);
+
+        if (key == null) {
+            ret.put("ok", false);
+            ret.put("error", "请先填写 API Key 再测试");
+            return ret;
+        }
+        if (url == null || !url.matches("^https?://.+")) {
+            ret.put("ok", false);
+            ret.put("error", "接口地址必须以 http:// 或 https:// 开头");
+            return ret;
+        }
+
+        long start = System.currentTimeMillis();
+        try {
+            String reply = aiClient.ping(url, key, m);
+            ret.put("ok", true);
+            ret.put("latencyMs", System.currentTimeMillis() - start);
+            ret.put("reply", reply);
+        } catch (AiException e) {
+            ret.put("ok", false);
+            ret.put("latencyMs", System.currentTimeMillis() - start);
+            ret.put("error", e.getMessage());
+        }
+        return ret;
+    }
+
+    /**
+     * 拉取模型列表，供前端下拉选择。不修改运行时配置。
+     */
+    public JSONArray listModels(String baseUrl, String apiKey) throws AiException {
+        String url = firstNonBlank(baseUrl, aiConfig.getBaseUrl());
+        String key = firstNonBlank(apiKey, aiConfig.getApiKey());
+        if (key == null) {
+            throw new AiException("请先填写 API Key 再拉取模型列表");
+        }
+        if (url == null || !url.matches("^https?://.+")) {
+            throw new AiException("接口地址必须以 http:// 或 https:// 开头");
+        }
+        return aiClient.listModels(url, key);
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.trim().isEmpty()) {
+            return first.trim();
+        }
+        if (second != null && !second.trim().isEmpty()) {
+            return second.trim();
+        }
+        return null;
+    }
+
+    private boolean isConfigured() {        String key = aiConfig.getApiKey();
+        return key != null && !key.trim().isEmpty();
+    }
+
+    /** 脱敏展示：sk-****abcd；短串一律 **** */
+    private String maskKey(String key) {
+        if (key == null || key.trim().isEmpty()) {
+            return "";
+        }
+        String k = key.trim();
+        if (k.length() <= 8) {
+            return "****";
+        }
+        return k.substring(0, 3) + "****" + k.substring(k.length() - 4);
+    }
+
+    private String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
     }
 
     // ---------- 内部方法 ----------

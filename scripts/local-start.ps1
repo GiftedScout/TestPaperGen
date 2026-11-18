@@ -66,6 +66,29 @@ function Wait-Port {
   return $false
 }
 
+# Resolve an absolute node.exe path. The original script used "cmd /c npm start",
+# which fails when npm/node are not on the PATH of the invoking PowerShell window
+# (common with WorkBuddy-managed Node installs). Calling node.exe + umi.js directly
+# removes that dependency.
+function Resolve-NodeExe {
+  $found = (Get-Command node.exe -ErrorAction SilentlyContinue).Source
+  if ($found -and (Test-Path $found)) { return $found }
+
+  $managed = Join-Path $env:USERPROFILE '.workbuddy\binaries\node\versions'
+  if (Test-Path $managed) {
+    $candidate = Get-ChildItem -Path $managed -Directory -ErrorAction SilentlyContinue |
+      Sort-Object Name -Descending |
+      ForEach-Object { Join-Path $_.FullName 'node.exe' } |
+      Where-Object { Test-Path $_ } |
+      Select-Object -First 1
+    if ($candidate) { return $candidate }
+  }
+
+  $systemNode = 'C:\Program Files\nodejs\node.exe'
+  if (Test-Path $systemNode) { return $systemNode }
+  throw 'node.exe not found. Install Node.js or add it to PATH.'
+}
+
 # ---------------- 1. MySQL ----------------
 if (Test-Port -Port 3306) {
   Write-Host '[skip] MySQL already listening on 3306'
@@ -124,9 +147,15 @@ if (Test-Port -Port 8000) {
   }
   Write-Host '[run]  starting umi dev server on 8000 (first start takes 30-60s) ...'
   $env:NODE_OPTIONS = '--openssl-legacy-provider'
-  $cmd = 'npm start > "{0}" 2>&1' -f (Join-Path $LogDir 'frontend.log')
-  Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', $cmd) `
-    -WorkingDirectory $FrontendDir -WindowStyle Hidden | Out-Null
+  $nodeExe = Resolve-NodeExe
+  $umiCli  = Join-Path $FrontendDir 'node_modules\umi\bin\umi.js'
+  if (-not (Test-Path $umiCli)) { throw "umi cli not found: $umiCli" }
+  Start-Process -FilePath $nodeExe `
+    -ArgumentList @("`"$umiCli`"", 'dev') `
+    -WorkingDirectory $FrontendDir `
+    -RedirectStandardOutput (Join-Path $LogDir 'frontend.log') `
+    -RedirectStandardError  (Join-Path $LogDir 'frontend.err.log') `
+    -WindowStyle Hidden | Out-Null
   if (-not (Wait-Port -Port 8000 -TimeoutSec 180 -Name 'frontend')) { exit 1 }
 }
 

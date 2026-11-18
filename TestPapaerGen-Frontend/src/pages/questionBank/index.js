@@ -3,7 +3,7 @@ import { connect, history } from 'umi';
 import moment from 'moment';
 import { Badge, Button, Input, message, PageHeader, Popconfirm, Select, Table, Tag } from 'antd';
 import Highlighter from 'react-highlight-words';
-import { FileAddOutlined, SearchOutlined, PieChartOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { FileAddOutlined, SearchOutlined, PieChartOutlined, ThunderboltOutlined, ApiOutlined } from '@ant-design/icons';
 import style from './index.less';
 import { checkCode, delay } from '../../utils/myUtils';
 import * as requestService from '../../services/requestServices';
@@ -11,6 +11,7 @@ import RenderDrawer from './renderDrawer';
 import OverViewModal from './overViewModal';
 import AiAnalysisModal from '../../components/AiAnalysisModal';
 import AiBatchResultModal from '../../components/AiBatchResultModal';
+import AiConfigModal from '../../components/AiConfigModal';
 
 
 const renderTopicType = text => {
@@ -211,7 +212,9 @@ class QuestionBank extends React.Component {
       batchVisible: false,
       batchResults: null,
       batchLoading: false,
-      selectedRowKeys: []
+      selectedRowKeys: [],
+      // AI 配置弹窗（仅管理员可见）
+      aiConfigVisible: false
     };
   }
 
@@ -257,8 +260,11 @@ class QuestionBank extends React.Component {
   handleHideAnalysis = () => {
     this.setState({ analysisVisible: false });
   };
-  // 生成成功后刷新题库列表，保证表格中解析状态同步
-  handleAnalysisGenerated = () => {
+  // 生成成功后：既更新弹窗内的题目数据，也刷新题库列表同步解析状态列
+  handleAnalysisGenerated = (updated) => {
+    if (updated) {
+      this.setState({ currentAnalysisQuestion: updated });
+    }
     this.props.dispatch({ type: 'questionBank/getQuestionBank' });
   };
 
@@ -455,6 +461,10 @@ class QuestionBank extends React.Component {
                     <span key="leftTop0">
                       <Button onClick={this.showModal} icon={<PieChartOutlined />} type="primary">概览功能</Button>
                     </span>,
+                    this.props.user_role === 'admin' ?
+                      <span style={{ margin: '0 15px' }} key="leftTopAiConfig">
+                        <Button onClick={() => this.setState({ aiConfigVisible: true })} icon={<ApiOutlined />}>AI 配置</Button>
+                      </span> : null,
                     <span style={{ margin: '0 15px' }} key="leftTopBatch">
                       <Badge count={this.state.selectedRowKeys.length}>
                         <Button onClick={this.handleBatchGenerate}
@@ -493,6 +503,11 @@ class QuestionBank extends React.Component {
         results={this.state.batchResults}
         onCancel={this.handleBatchClose}
       />
+      {/*AI 运行时配置弹窗（管理员）*/}
+      <AiConfigModal
+        visible={this.state.aiConfigVisible}
+        onCancel={() => this.setState({ aiConfigVisible: false })}
+      />
       {/*题库表格*/}
       {
         renderTable()
@@ -501,10 +516,11 @@ class QuestionBank extends React.Component {
   }
 }
 
-function mapStateToProps({ questionBank, questionGenerator }) {
+function mapStateToProps({ questionBank, questionGenerator, loginModel }) {
   const { tableDataSource, eachChapterCount } = questionBank;
   const { testPaperGenList } = questionGenerator;
-  return { tableDataSource, eachChapterCount, testPaperGenList };
+  const { user_role } = loginModel;
+  return { tableDataSource, eachChapterCount, testPaperGenList, user_role };
 }
 
 export default connect(mapStateToProps)(QuestionBank);

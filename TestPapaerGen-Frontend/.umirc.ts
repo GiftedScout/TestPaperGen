@@ -31,6 +31,7 @@ export default defineConfig({
 
         // 管理员
         {exact: true, path: '/admin', component: '@/pages/admin', title: "组卷系统-管理员"},
+        {exact: true, path: '/aiConfig', component: '@/pages/aiConfig', title: "组卷系统-AI配置"},
 
         // 用户
         {exact: true, path: '/home', component: '@/pages/home', title: "组卷系统-首页"},

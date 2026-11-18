@@ -376,11 +376,44 @@ export function updateAnalysis(payload) {
   })
 }
 
-// 查询 AI 模块运行状态
+// 查询 AI 模块运行状态（含脱敏 Key 和配置标志，不含明文）
 export function getAiStatus() {
   const url = `${API}/aiAnalysis/status`;
   return request(url, {
     method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 管理员运行时配置 AI 参数（密钥只写入后端内存，不持久化）
+export function saveAiConfig(payload) {
+  const url = `${API}/aiAnalysis/config`;
+  return request(url, {
+    method: 'post',
+    data: payload,
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 连通性测试（不保存配置）
+export function testAiConnection(payload) {
+  const url = `${API}/aiAnalysis/test`;
+  return request(url, {
+    method: 'post',
+    data: payload,
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 拉取模型列表
+export function listAiModels(payload) {
+  const url = `${API}/aiAnalysis/models`;
+  return request(url, {
+    method: 'post',
+    data: payload,
     mode: 'cors',
     credentials: 'include',
   })

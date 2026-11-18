@@ -8,7 +8,8 @@ import {
   FileAddOutlined,
   HistoryOutlined,
   UserOutlined,
-  LoginOutlined
+  LoginOutlined,
+  ApiOutlined
 } from '@ant-design/icons';
 
 class TopMenu extends React.Component {
@@ -35,6 +36,11 @@ class TopMenu extends React.Component {
             key: "/admin",
             icon: <HomeOutlined />,
             label: "管理员首页"
+          },
+          {
+            key: "/aiConfig",
+            icon: <ApiOutlined />,
+            label: "AI 配置"
           },
           {
             key: "/login",
@@ -71,12 +77,17 @@ class TopMenu extends React.Component {
             icon: <HistoryOutlined />,
             label: "出题历史"
           },
+          this.props.user_role === 'admin' ? {
+            key: "/aiConfig",
+            icon: <ApiOutlined />,
+            label: "AI 配置"
+          } : null,
           {
             key: "/login",
             icon: <UserOutlined />,
             label: `退出登陆：${this.props.username}`
           }
-        ]
+        ].filter(Boolean)
         return <Menu items={items}
                      mode="horizontal"
                      theme='dark'
@@ -100,8 +111,8 @@ class TopMenu extends React.Component {
 }
 
 function mapStateToProps({ loginModel }) {
-  const { username } = loginModel;
-  return { username };
+  const { username, user_role } = loginModel;
+  return { username, user_role };
 }
 
 export default connect(mapStateToProps)(TopMenu);

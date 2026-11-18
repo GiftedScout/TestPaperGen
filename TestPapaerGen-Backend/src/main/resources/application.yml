@@ -31,8 +31,8 @@ ai:
   model: gpt-3.5-turbo
   # 请求超时（毫秒），需求约束 15s
   timeout-ms: 15000
-  # 单次生成最大 token 数
-  max-tokens: 800
+  # 单次生成最大 token 数（解析要求 200 字以内，留足余量避免中途截断）
+  max-tokens: 1200
   # 采样温度，越低输出越稳定
   temperature: 0.3
   # 解析内容最大长度（字符），超出视为异常返回

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, message, Modal, Spin, Tag } from 'antd';
+import { Alert, Button, Input, message, Modal, Spin, Tag } from 'antd';
 import moment from 'moment';
 import { checkCode } from '../utils/myUtils';
 import * as requestService from '../services/requestServices';
@@ -19,13 +19,14 @@ class AiAnalysisModal extends React.Component {
       saving: false,    // 保存中
       editing: false,   // 编辑态
       draft: '',        // 编辑中的解析草稿
+      error: '',        // 生成失败原因（直接展示在弹窗内，避免"看起来是空的"）
     };
   }
 
   componentDidUpdate(prevProps) {
     // 每次打开弹窗时重置编辑态，载入当前题目解析
     if (!prevProps.visible && this.props.visible) {
-      this.setState({ editing: false, draft: this.props.question ? (this.props.question.analysis || '') : '' });
+      this.setState({ editing: false, error: '', draft: this.props.question ? (this.props.question.analysis || '') : '' });
     }
   }
 
@@ -33,22 +34,26 @@ class AiAnalysisModal extends React.Component {
   handleGenerate = () => {
     const question = this.props.question;
     if (!question) return;
-    this.setState({ loading: true });
+    this.setState({ loading: true, error: '' });
     requestService.generateAnalysis({ questionId: question.id })
       .then(res => {
-        if (checkCode(res)) {
+        if (checkCode(res) && res.data && res.data.analysis) {
           message.success('解析生成成功');
-          this.setState({ draft: res.data.analysis || '', editing: false });
+          this.setState({ draft: res.data.analysis, editing: false, error: '' });
           if (this.props.onGenerated) {
             this.props.onGenerated(res.data);
           }
         } else {
-          message.error(res.msg || '解析生成失败');
+          const msg = (res && res.msg) || '解析生成失败：后端未返回解析内容';
+          message.error(msg);
+          this.setState({ error: msg });
         }
       })
       .catch(e => {
         console.log(e);
-        message.error('解析生成失败，请检查网络或 AI 配置');
+        const msg = '解析生成失败，请检查网络或「AI 配置」中的地址、密钥与模型';
+        message.error(msg);
+        this.setState({ error: msg });
       })
       .finally(() => this.setState({ loading: false }));
   };
@@ -83,8 +88,10 @@ class AiAnalysisModal extends React.Component {
 
   render() {
     const { visible, question, onCancel } = this.props;
-    const { loading, saving, editing, draft } = this.state;
-    const hasAnalysis = question && question.analysis;
+    const { loading, saving, editing, draft, error } = this.state;
+    // 生成/保存成功后弹窗内的 props 可能尚未流动到位，这里以草稿优先，保证结果立即可见
+    const currentText = (draft && draft.trim()) ? draft : ((question && question.analysis) || '');
+    const hasAnalysis = !!currentText;
 
     return (
       <Modal
@@ -103,6 +110,15 @@ class AiAnalysisModal extends React.Component {
         width={640}
       >
         <Spin spinning={loading}>
+          {error ? (
+            <Alert
+              type="error"
+              showIcon
+              message="解析生成失败"
+              description={error}
+              style={{ marginBottom: 12 }}
+            />
+          ) : null}
           <div style={{ marginBottom: 12 }}>
             <Tag color="blue">{question ? question.topic_type : ''}</Tag>
             {question && question.analysis_status === 1 && question.analysis_update_time ?
@@ -127,7 +143,7 @@ class AiAnalysisModal extends React.Component {
               whiteSpace: 'pre-wrap',
               lineHeight: 1.8,
             }}>
-              {hasAnalysis ? question.analysis :
+              {hasAnalysis ? currentText :
                 <span style={{ color: '#999' }}>暂无解析，点击「AI 生成解析」一键生成。</span>}
             </div>
           )}
