@@ -18,4 +18,14 @@ public interface AiClient {
      * @throws AiException 网络异常、超时、返回格式非法等
      */
     String generateAnalysis(QuestionBank question) throws AiException;
+
+    /**
+     * 为题目反推建议答案（任务包 A 答案治理）。
+     * 仅返回原始文本，格式校验与落库由答案治理服务负责。
+     *
+     * @param question 题目（topic / topic_type / answer 原值）
+     * @return 模型原始输出，期望为 {"answer":"...","confidence":0.0}
+     * @throws AiException 网络异常、超时、未配置密钥等
+     */
+    String suggestAnswer(QuestionBank question) throws AiException;
 }

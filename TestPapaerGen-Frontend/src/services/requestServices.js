@@ -418,3 +418,188 @@ export function listAiModels(payload) {
     credentials: 'include',
   })
 }
+
+// ------------------------------------------------------------------
+// 任务包 A：考试发布、作答、结果与报告
+// ------------------------------------------------------------------
+
+// 教师/管理员：发布试卷
+export function publishExam(payload) {
+  const url = `${API}/exam/publish`;
+  return request(url, {
+    method: 'post',
+    data: payload,
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 教师/管理员：已发布列表
+export function getExamPublishList() {
+  const url = `${API}/exam/publish/list`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 教师/管理员：某次发布的提交列表，payload = {id}
+export function getExamSubmissions(payload) {
+  const url = `${API}/exam/publish/${payload.id}/submissions`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 教师/管理员：班级报告，payload = {id}
+export function getClassReport(payload) {
+  const url = `${API}/exam/publish/${payload.id}/report`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 教师/管理员：可选学生列表
+export function getExamStudents() {
+  const url = `${API}/exam/students`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 当前登录身份
+export function getExamMe() {
+  const url = `${API}/exam/me`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 学生：我的考试列表
+export function getStudentPapers() {
+  const url = `${API}/exam/student/papers`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 学生：按发布 id 获取答题试卷，payload = {publishId}
+export function getStudentPaper(payload) {
+  const url = `${API}/exam/student/papers/${payload.publishId}`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 学生：提交作答，payload = {publishId, answers}
+export function submitStudentPaper(payload) {
+  const url = `${API}/exam/student/papers/${payload.publishId}/submit`;
+  return request(url, {
+    method: 'post',
+    data: {answers: payload.answers},
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 学生：作答结果，payload = {publishId}
+export function getStudentResult(payload) {
+  const url = `${API}/exam/student/papers/${payload.publishId}/result`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 学生：学习报告，payload = {publishId?}
+export function getStudentReport(payload) {
+  const url = `${API}/exam/report/student`;
+  return request(url, {
+    method: 'get',
+    params: payload || {},
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// ------------------------------------------------------------------
+// 任务包 A：答案治理
+// ------------------------------------------------------------------
+
+// 待确认答案列表，payload = {keyword?, topicType?, lowOnly?}
+export function getAnswerPending(payload) {
+  const url = `${API}/exam/answers/pending`;
+  return request(url, {
+    method: 'get',
+    params: payload || {},
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 批量反推答案建议，payload = {questionIds}
+export function suggestAnswers(payload) {
+  const url = `${API}/exam/answers/suggest`;
+  return request(url, {
+    method: 'post',
+    data: payload,
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 采纳/编辑后确认，payload = {auditId, finalAnswer}
+export function confirmAnswer(payload) {
+  const url = `${API}/exam/answers/confirm`;
+  return request(url, {
+    method: 'post',
+    data: payload,
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 驳回建议，payload = {auditId, reason}
+export function rejectAnswer(payload) {
+  const url = `${API}/exam/answers/reject`;
+  return request(url, {
+    method: 'post',
+    data: payload,
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 某题的审计记录，payload = {questionId}
+export function getAnswerAudits(payload) {
+  const url = `${API}/exam/answers/audits/${payload.questionId}`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}
+
+// 按题型分层抽检准确率
+export function getAnswerSampling() {
+  const url = `${API}/exam/answers/sampling`;
+  return request(url, {
+    method: 'get',
+    mode: 'cors',
+    credentials: 'include',
+  })
+}

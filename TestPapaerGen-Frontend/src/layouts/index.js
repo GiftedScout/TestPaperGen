@@ -9,8 +9,13 @@ import {
   HistoryOutlined,
   UserOutlined,
   LoginOutlined,
-  ApiOutlined
+  ApiOutlined,
+  FormOutlined,
+  BarChartOutlined,
+  ScheduleOutlined,
+  SafetyCertificateOutlined
 } from '@ant-design/icons';
+import ExamSocket from '../components/ExamSocket';
 
 class TopMenu extends React.Component {
   constructor(props) {
@@ -51,6 +56,30 @@ class TopMenu extends React.Component {
         return <Menu items={items} mode="horizontal" theme='dark' onClick={onClick} selectedKeys={history.location.pathname} />
       }
       else {
+        const userExamItems = this.props.user_role === 'user' ? [
+          {
+            key: "/exam",
+            icon: <FormOutlined />,
+            label: "我的考试"
+          },
+          {
+            key: "/examReport",
+            icon: <BarChartOutlined />,
+            label: "学习报告"
+          }
+        ] : [];
+        const teacherExamItems = (this.props.user_role === 'teacher' || this.props.user_role === 'admin') ? [
+          {
+            key: "/examManage",
+            icon: <ScheduleOutlined />,
+            label: "考试管理"
+          },
+          {
+            key: "/answerAudit",
+            icon: <SafetyCertificateOutlined />,
+            label: "答案治理"
+          }
+        ] : [];
         const items = [
           {
             key: "/home",
@@ -82,6 +111,8 @@ class TopMenu extends React.Component {
             icon: <ApiOutlined />,
             label: "AI 配置"
           } : null,
+          ...userExamItems,
+          ...teacherExamItems,
           {
             key: "/login",
             icon: <UserOutlined />,
@@ -106,13 +137,14 @@ class TopMenu extends React.Component {
         <div id="contents">
           { this.props.children }
         </div>
+        { this.props.isLogin && this.props.user_role ? <ExamSocket /> : null }
     </div>;
   }
 }
 
 function mapStateToProps({ loginModel }) {
-  const { username, user_role } = loginModel;
-  return { username, user_role };
+  const { username, user_role, isLogin } = loginModel;
+  return { username, user_role, isLogin };
 }
 
 export default connect(mapStateToProps)(TopMenu);

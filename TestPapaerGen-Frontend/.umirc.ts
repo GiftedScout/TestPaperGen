@@ -40,6 +40,14 @@ export default defineConfig({
         {exact: true, path: '/questionGenerator', component: '@/pages/questionGenerator', title: "组卷系统-组卷"},
         {exact: true, path: '/questionGenHistory', component: '@/pages/questionGenHistory', title: "组卷系统-历史记录"},
         // {exact: true, path: '/questionManager', component: '@/pages/questionManager', title: "组卷系统"}
+
+        // 任务包 A：学生端考试闭环
+        {exact: true, path: '/exam', component: '@/pages/exam', title: "组卷系统-我的考试"},
+        {exact: true, path: '/exam/answer/:publishId', component: '@/pages/exam/answer', title: "组卷系统-在线作答"},
+        {exact: true, path: '/exam/result/:publishId', component: '@/pages/exam/result', title: "组卷系统-作答结果"},
+        {exact: true, path: '/examReport', component: '@/pages/examReport', title: "组卷系统-学习报告"},
+        {exact: true, path: '/examManage', component: '@/pages/examManage', title: "组卷系统-考试管理"},
+        {exact: true, path: '/answerAudit', component: '@/pages/answerAudit', title: "组卷系统-答案治理"}
       ]
     }
   ],

@@ -22,6 +22,19 @@ public class QuestionBank {
     private Integer analysis_status;
     /** 解析最近更新时间 */
     private Date analysis_update_time;
+    // 答案治理字段，见 database/migrations/002_task_a_exam.sql
+    /** 答案确认状态：0 未确认，1 已确认 */
+    private Integer answer_confirm_status;
+    /** AI 反推建议值（未生效） */
+    private String answer_suggest;
+    /** 建议置信度 0~1 */
+    private Double answer_confidence;
+    /** 建议来源：ai / mock */
+    private String answer_suggest_source;
+    /** 答案确认人 */
+    private String answer_confirmed_by;
+    /** 答案确认时间 */
+    private Date answer_confirmed_time;
 
     public Integer getId() {
         return id;
@@ -141,5 +154,53 @@ public class QuestionBank {
 
     public void setAnalysis_update_time(Date analysis_update_time) {
         this.analysis_update_time = analysis_update_time;
+    }
+
+    public Integer getAnswer_confirm_status() {
+        return answer_confirm_status;
+    }
+
+    public void setAnswer_confirm_status(Integer answer_confirm_status) {
+        this.answer_confirm_status = answer_confirm_status;
+    }
+
+    public String getAnswer_suggest() {
+        return answer_suggest;
+    }
+
+    public void setAnswer_suggest(String answer_suggest) {
+        this.answer_suggest = answer_suggest;
+    }
+
+    public Double getAnswer_confidence() {
+        return answer_confidence;
+    }
+
+    public void setAnswer_confidence(Double answer_confidence) {
+        this.answer_confidence = answer_confidence;
+    }
+
+    public String getAnswer_suggest_source() {
+        return answer_suggest_source;
+    }
+
+    public void setAnswer_suggest_source(String answer_suggest_source) {
+        this.answer_suggest_source = answer_suggest_source;
+    }
+
+    public String getAnswer_confirmed_by() {
+        return answer_confirmed_by;
+    }
+
+    public void setAnswer_confirmed_by(String answer_confirmed_by) {
+        this.answer_confirmed_by = answer_confirmed_by;
+    }
+
+    public Date getAnswer_confirmed_time() {
+        return answer_confirmed_time;
+    }
+
+    public void setAnswer_confirmed_time(Date answer_confirmed_time) {
+        this.answer_confirmed_time = answer_confirmed_time;
     }
 }
