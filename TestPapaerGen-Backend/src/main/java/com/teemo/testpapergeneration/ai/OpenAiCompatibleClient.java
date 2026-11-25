@@ -66,6 +66,57 @@ public class OpenAiCompatibleClient implements AiClient {
         throw lastError;
     }
 
+    @Override
+    public String suggestAnswer(QuestionBank question) throws AiException {
+        if (aiConfig.getApiKey() == null || aiConfig.getApiKey().trim().isEmpty()) {
+            throw new AiException("AI 接口未配置 apiKey，无法执行答案反推");
+        }
+        JSONObject body = new JSONObject();
+        body.put("model", aiConfig.getModel());
+        body.put("temperature", 0);
+        body.put("max_tokens", 200);
+        JSONArray messages = new JSONArray();
+        JSONObject systemMessage = new JSONObject();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", "你是一名严谨的高校教师，只输出符合要求的 JSON，不要输出任何解释或 Markdown 标记。");
+        JSONObject userMessage = new JSONObject();
+        userMessage.put("role", "user");
+        userMessage.put("content", buildSuggestPrompt(question));
+        messages.add(systemMessage);
+        messages.add(userMessage);
+        body.put("messages", messages);
+
+        String responseBody = post(aiConfig.getBaseUrl(), aiConfig.getApiKey(),
+                "/chat/completions", body.toJSONString());
+        try {
+            JSONObject json = JSONObject.parseObject(responseBody);
+            JSONArray choices = json.getJSONArray("choices");
+            if (choices == null || choices.isEmpty()) {
+                throw new AiException("大模型返回格式异常：缺少 choices 字段");
+            }
+            JSONObject message = choices.getJSONObject(0).getJSONObject("message");
+            String content = message == null ? null : message.getString("content");
+            if (content == null || content.trim().isEmpty()) {
+                throw new AiException("大模型返回内容为空，无法得到建议答案");
+            }
+            return content.trim();
+        } catch (AiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AiException("大模型返回格式解析失败：" + e.getMessage(), e);
+        }
+    }
+
+    private String buildSuggestPrompt(QuestionBank question) {
+        return "请为下面题目反推标准答案。"
+                + "题型：" + nullToEmpty(question.getTopic_type()) + "；"
+                + "题干：" + nullToEmpty(question.getTopic()) + "；"
+                + "现有答案（可能是占位符 AAAA，不可作为依据）：" + nullToEmpty(question.getAnswer()) + "。"
+                + "输出要求：只输出 JSON，格式为 {\"answer\":\"...\",\"confidence\":0.0}；"
+                + "选择题 answer 只能是选项字母（如 A 或 ABD）；判断题只能是“对”或“错”；"
+                + "填空题按空位顺序作答，多空用 | 分隔；confidence 为 0 到 1 之间的小数，表示你的把握程度。";
+    }
+
     /** 一次完整的模型调用：构造请求 -> 发送 -> 解析 choices[0].message.content */
     private String requestAnalysis(QuestionBank question) throws AiException {
         // 1、构造请求体
